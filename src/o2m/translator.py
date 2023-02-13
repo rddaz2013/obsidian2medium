@@ -27,7 +27,7 @@ def postToMedium(token, title, tags, content):
         "Authorization": f"Bearer {token}",
         "Upgrade-Insecure-Requests": "1",
     }
-    
+
     data = {
         "title": f"{title}",
         "contentFormat": "markdown",
@@ -36,9 +36,7 @@ def postToMedium(token, title, tags, content):
         "publishStatus": "public",  # "public" will publish to gibubfor putting draft use value "draft"
     }
     response = requests.get(
-        url=url + "/me",  # https://api.medium.com/me
-        headers=header,
-        params={"accessToken": token},
+        url=f"{url}/me", headers=header, params={"accessToken": token}
     )
     # checking response from server
     if response.status_code == 200:
@@ -51,10 +49,10 @@ def postToMedium(token, title, tags, content):
             data=data,
         )
         print(response.text)
-        if response.status_code == 200:
-            response_json = response.json()
-            url = response_json["data"]["url"]
-            print(url)  # this url where you can acess your url
+    if response.status_code == 200:
+        response_json = response.json()
+        url = response_json["data"]["url"]
+        print(url)  # this url where you can acess your url
 
 
 def postImage(token, image_path):
@@ -72,14 +70,11 @@ def postImage(token, image_path):
         "Authorization": f"Bearer {token}",
         "Upgrade-Insecure-Requests": "1",
     }
-    
+
     with open(image_path, "rb") as image:
         files = {"image": (image_path, image, image_type)}
         response = requests.request(
-            "post",
-            url=url + "/images",  # https://api.medium.com/images
-            headers=header,
-            files=files
+            "post", url=f"{url}/images", headers=header, files=files
         )
         # checking response from server
         if 200 <= response.status_code < 300:
@@ -101,9 +96,7 @@ def getConfigurations(config_file_path=""):
     if os.path.isfile(config_file_path):
         # open JSON file
         config_file = open(config_file_path, "r")
-        # read date from file
-        data = json.loads(config_file.read())
-        return data
+        return json.loads(config_file.read())
     else:
         print("Config file not found")
         exit(0)
@@ -124,9 +117,7 @@ class translator_tp:
         mime_parse = mimestart.split("/")
         if mime_parse[0] == "image":
             return "image"
-        if mime_parse[1] == "pdf":
-            return "pdf"
-        return "undefined"
+        return "pdf" if mime_parse[1] == "pdf" else "undefined"
 
     def get_file_type_detail(self, file_name: str):
         mimestart = mimetypes.guess_type(file_name)[0].lower()
@@ -142,9 +133,8 @@ class translator_tp:
             for line in file:
                 tag_list = re.findall(tag_pattern, line)
                 link_list = re.findall(link_pattern, line)
-                if len(tag_list) > 0:
-                    if len(self.tags) == 0:
-                        self.tags = tag_list
+                if len(tag_list) > 0 and len(self.tags) == 0:
+                    self.tags = tag_list
                 if len(link_list) > 0:
                     self.links += link_list
             file.close()
@@ -187,7 +177,7 @@ class translator_tp:
             output, error = process.communicate()
             file_paths = list(output.decode("utf-8").split("\n"))
             # print(output)
-            if len(file_paths) > 0:
+            if file_paths:
                 break
         if len(file_paths) == 0:
             print("Cannot find file in path")
@@ -197,14 +187,14 @@ class translator_tp:
     def translate(self):
         tag_pattern = r"#[^\ ^#^\s]+"
         link_pattern = r"\!\[\[.+\]\]"
-        
-        token = self.config["medium_token"]        
+
+        token = self.config["medium_token"]
         # os.mkdir(output_dir_name)
 
         image_counter = 0
 
         md_file_content = ""
-        info_header = "# " + self.title + "\n"
+        info_header = f"# {self.title}" + "\n"
         # output_file.write(info_header)
         md_file_content += info_header
 
@@ -220,7 +210,7 @@ class translator_tp:
                     link_file_location = self.get_file_location(link_file_name)
                     link_file_location = link_file_location.replace(" ", " ")
                     link_file_type = self.get_file_type(link_file_location)
-                    if link_file_type == "undefined" or link_file_type == "pdf":
+                    if link_file_type in ["undefined", "pdf"]:
                         # do not care about undefined files
                         continue
                     elif link_file_type == "image":
@@ -245,7 +235,7 @@ class translator_tp:
 def o2m():
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="get the obs markdown filename", type=str)
-    
+
     args = parser.parse_args()
     if str(args.filename)[-3:] != ".md":
         print("This is not a .md file")
@@ -253,7 +243,7 @@ def o2m():
 
     vm = translator_tp()
     vm.input = args.filename
-    vm.name = vm.input.split("/")[-1][0:-3]
+    vm.name = vm.input.split("/")[-1][:-3]
     vm.config = getConfigurations()
 
     vm.read_and_find_info()
